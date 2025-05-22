@@ -1,10 +1,14 @@
 import { useState } from 'react';
+import { useContext } from 'react';
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 import ApperIcon from '../components/ApperIcon';
 import MainFeature from '../components/MainFeature';
+import { AuthContext } from '../App';
 
 const Home = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { isAuthenticated, user, logout } = useContext(AuthContext);
 
   const fadeIn = {
     hidden: { opacity: 0, y: 20 },
@@ -35,19 +39,36 @@ const Home = () => {
             <a href="#" className="text-surface-600 dark:text-surface-300 hover:text-primary dark:hover:text-primary-light">
               Categories
             </a>
-            <a href="#" className="text-surface-600 dark:text-surface-300 hover:text-primary dark:hover:text-primary-light">
+            <Link to="#" className="text-surface-600 dark:text-surface-300 hover:text-primary dark:hover:text-primary-light">
               About
-            </a>
+            </Link>
           </nav>
 
           {/* User Actions */}
           <div className="hidden md:flex items-center space-x-4">
-            <button aria-label="Wishlist" className="p-2 text-surface-600 dark:text-surface-300 hover:text-primary dark:hover:text-primary-light">
-              <ApperIcon name="Heart" className="h-5 w-5" />
-            </button>
-            <button aria-label="Search" className="p-2 text-surface-600 dark:text-surface-300 hover:text-primary dark:hover:text-primary-light">
-              <ApperIcon name="Search" className="h-5 w-5" />
-            </button>
+            {isAuthenticated ? (
+              <div className="flex items-center space-x-4">
+                <div className="text-surface-700 dark:text-surface-300">
+                  Welcome, {user?.firstName || 'User'}
+                </div>
+                <button 
+                  onClick={logout}
+                  aria-label="Logout" 
+                  className="p-2 text-surface-600 dark:text-surface-300 hover:text-primary dark:hover:text-primary-light"
+                >
+                  <ApperIcon name="LogOut" className="h-5 w-5" />
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center space-x-4">
+                <Link to="/login" className="btn-outline">
+                  Login
+                </Link>
+                <Link to="/signup" className="btn-primary">
+                  Sign Up
+                </Link>
+              </div>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -81,13 +102,29 @@ const Home = () => {
               <a href="#" className="py-2 text-surface-600 dark:text-surface-300">
                 About
               </a>
-              <div className="flex space-x-4 pt-2">
-                <button aria-label="Wishlist" className="p-2 text-surface-600 dark:text-surface-300">
-                  <ApperIcon name="Heart" className="h-5 w-5" />
-                </button>
-                <button aria-label="Search" className="p-2 text-surface-600 dark:text-surface-300">
-                  <ApperIcon name="Search" className="h-5 w-5" />
-                </button>
+              <div className="pt-4 border-t border-surface-200 dark:border-surface-700 mt-2">
+                {isAuthenticated ? (
+                  <div className="flex flex-col space-y-4">
+                    <div className="text-surface-700 dark:text-surface-300">
+                      Welcome, {user?.firstName || 'User'}
+                    </div>
+                    <button 
+                      onClick={logout}
+                      className="btn-outline w-full"
+                    >
+                      Logout
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex flex-col space-y-2">
+                    <Link to="/login" className="btn-outline w-full">
+                      Login
+                    </Link>
+                    <Link to="/signup" className="btn-primary w-full">
+                      Sign Up
+                    </Link>
+                  </div>
+                )}
               </div>
             </nav>
           </motion.div>
