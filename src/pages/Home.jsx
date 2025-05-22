@@ -36,6 +36,9 @@ const Home = () => {
             <a href="#" className="text-surface-600 dark:text-surface-300 hover:text-primary dark:hover:text-primary-light">
               Shop
             </a>
+            <Link to="/invoices" className="text-surface-600 dark:text-surface-300 hover:text-primary dark:hover:text-primary-light">
+              Invoices
+            </Link>
             <a href="#" className="text-surface-600 dark:text-surface-300 hover:text-primary dark:hover:text-primary-light">
               Categories
             </a>
@@ -96,6 +99,9 @@ const Home = () => {
               <a href="#" className="py-2 text-surface-600 dark:text-surface-300">
                 Shop
               </a>
+              <Link to="/invoices" className="py-2 text-surface-600 dark:text-surface-300">
+                Invoices
+              </Link>
               <a href="#" className="py-2 text-surface-600 dark:text-surface-300">
                 Categories
               </a>
@@ -245,6 +251,7 @@ const Home = () => {
               <ul className="space-y-2">
                 <li><a href="#" className="text-surface-300 hover:text-white">Home</a></li>
                 <li><a href="#" className="text-surface-300 hover:text-white">Shop</a></li>
+                <li><Link to="/invoices" className="text-surface-300 hover:text-white">Invoices</Link></li>
                 <li><a href="#" className="text-surface-300 hover:text-white">Categories</a></li>
                 <li><a href="#" className="text-surface-300 hover:text-white">About Us</a></li>
                 <li><a href="#" className="text-surface-300 hover:text-white">Contact</a></li>

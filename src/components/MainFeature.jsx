@@ -9,6 +9,7 @@ import { fetchCategories } from '../services/categoryService';
 import { getUserCart, createCart, updateCart } from '../services/cartService';
 import { addCartItem, updateCartItem, removeCartItem } from '../services/cartItemService';
 import { createOrder } from '../services/orderService';
+import { createInvoice } from '../services/invoiceService';
 
 const MainFeature = () => {
   const navigate = useNavigate();
@@ -28,6 +29,7 @@ const MainFeature = () => {
     addToCart: false,
     removeFromCart: false,
     updateQuantity: false,
+    generateInvoice: false,
     checkout: false
   });
   const [error, setError] = useState({
@@ -37,6 +39,7 @@ const MainFeature = () => {
     addToCart: null,
     removeFromCart: null,
     updateQuantity: null,
+    generateInvoice: null,
     checkout: null
   });
 
@@ -309,6 +312,55 @@ const MainFeature = () => {
       setLoading(prev => ({ ...prev, updateQuantity: false }));
     });
   };
+  // Generate invoice from cart
+  const handleGenerateInvoice = async () => {
+    if (cart.length === 0) {
+      toast.error("Your cart is empty");
+      return;
+    }
+    
+    // Redirect to login if not authenticated
+    if (!isAuthenticated) {
+      toast.info('Please log in to generate an invoice');
+      navigate('/login?redirect=/');
+      return;
+    }
+    
+    setLoading(prev => ({ ...prev, generateInvoice: true }));
+    
+    try {
+      // Create invoice data from cart
+      const invoiceData = {
+        Name: `Invoice for ${user?.firstName} ${user?.lastName || ''}`,
+        invoiceNumber: `INV-${Date.now().toString().slice(-6)}`,
+        customer: `${user?.firstName} ${user?.lastName || ''}`,
+        customerEmail: user?.emailAddress || '',
+        issueDate: new Date().toISOString().split('T')[0],
+        dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        status: 'pending',
+        items: JSON.stringify(cart.map(item => ({
+          description: item.name,
+          quantity: item.quantity,
+          unitPrice: item.price
+        }))),
+        subtotal: cartTotal,
+        tax: cartTotal * 0.1, // 10% tax
+        total: cartTotal + (cartTotal * 0.1),
+        notes: 'Thank you for your business!'
+      };
+      
+      // Create invoice
+      const newInvoice = await createInvoice(invoiceData);
+      toast.success("Invoice generated successfully!");
+      navigate(`/invoices/${newInvoice.Id}`);
+    } catch (err) {
+      console.error('Error generating invoice:', err);
+      toast.error('Failed to generate invoice');
+    } finally {
+      setLoading(prev => ({ ...prev, generateInvoice: false }));
+    }
+  };
+
 
   // Checkout function
   const handleCheckout = () => {
@@ -364,6 +416,7 @@ const MainFeature = () => {
   const isProductsLoading = loading.products;
   const isCategoriesLoading = loading.categories;
   const isCartLoading = loading.cart;
+  const isGeneratingInvoice = loading.generateInvoice;
   const isCheckoutLoading = loading.checkout;
   
   // Show loading indicator when products are being fetched
@@ -608,12 +661,22 @@ const MainFeature = () => {
                 <span className="font-bold text-lg">${cartTotal.toFixed(2)}</span>
               </div>
               <button 
-                onClick={handleCheckout}
-                disabled={cart.length === 0}
-                className="btn-primary w-full py-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={handleGenerateInvoice}
+                disabled={cart.length === 0 || isGeneratingInvoice}
+                className="btn-outline w-full py-3 mb-3 disabled:opacity-50 disabled:cursor-not-allowed relative"
               >
-                Checkout
+                {isGeneratingInvoice && <ApperIcon name="Loader" className="animate-spin h-5 w-5 absolute left-1/2 transform -translate-x-1/2" />}
+                <span className={isGeneratingInvoice ? 'opacity-0' : ''}>Generate Invoice</span>
               </button>
+              <button 
+                onClick={handleCheckout}
+                disabled={cart.length === 0 || isCheckoutLoading}
+                className="btn-primary w-full py-3 disabled:opacity-50 disabled:cursor-not-allowed relative"
+              >
+                {isCheckoutLoading && <ApperIcon name="Loader" className="animate-spin h-5 w-5 absolute left-1/2 transform -translate-x-1/2" />}
+                <span className={isCheckoutLoading ? 'opacity-0' : ''}>Checkout</span>
+              </button>
+              </div>
             </div>
           </motion.div>
         </>

@@ -10,6 +10,10 @@ import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Callback from './pages/Callback';
 import ErrorPage from './pages/ErrorPage';
+import InvoiceList from './pages/invoices/InvoiceList';
+import InvoiceDetail from './pages/invoices/InvoiceDetail';
+import CreateInvoice from './pages/invoices/CreateInvoice';
+import InvoiceSettings from './pages/invoices/InvoiceSettings';
 import { setUser, clearUser } from './store/userSlice';
 import { updateUser } from './services/userService';
 
@@ -167,6 +171,10 @@ function App() {
         <Route path="/signup" element={<Signup />} />
         <Route path="/callback" element={<Callback />} />
         <Route path="/error" element={<ErrorPage />} />
+        <Route path="/invoices" element={<InvoiceList />} />
+        <Route path="/invoices/:id" element={<InvoiceDetail />} />
+        <Route path="/invoices/create" element={<CreateInvoice />} />
+        <Route path="/invoices/settings" element={<InvoiceSettings />} />
         <Route path="*" element={<NotFound />} />
         <Route path="/" element={<Home />} />
       </Routes>
