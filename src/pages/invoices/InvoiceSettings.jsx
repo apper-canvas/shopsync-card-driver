@@ -1,5 +1,5 @@
 import { useState, useEffect, useContext } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import ApperIcon from '../../components/ApperIcon';
 import { AuthContext } from '../../App';
@@ -7,19 +7,29 @@ import { AuthContext } from '../../App';
 const InvoiceSettings = () => {
   const navigate = useNavigate();
   const { isAuthenticated } = useContext(AuthContext);
-  const [settings, setSettings] = useState({
-    companyName: 'ShopSync',
-    companyAddress: '123 Commerce Street, New York, NY 10001',
-    companyEmail: 'contact@shopsync.com',
-    companyPhone: '(555) 123-4567',
-    companyLogo: '',
-    invoicePrefix: 'INV-',
-    defaultTaxRate: 10,
-    defaultDueDays: 30,
-    defaultNotes: 'Thank you for your business!',
-    paymentInstructions: 'Please make payment to the following account:\nBank: Commerce Bank\nAccount: 1234567890'
-  });
   const [loading, setLoading] = useState(false);
+  const [settings, setSettings] = useState({
+    defaultTaxRate: 10,
+    defaultPaymentTerms: 30,
+    invoicePrefix: 'INV-',
+    companyName: '',
+    companyAddress: '',
+    companyPhone: '',
+    companyEmail: '',
+    companyWebsite: '',
+    companyLogo: '',
+    bankName: '',
+    bankAccountName: '',
+    bankAccountNumber: '',
+    bankRoutingNumber: '',
+    noteToCustomer: 'Thank you for your business!',
+    paymentInstructions: 'Please make payment within the due date.',
+    emailTemplate: 'Dear {{customer}},\n\nPlease find attached invoice {{invoiceNumber}} due on {{dueDate}}.\n\nTotal Amount: ${{total}}\n\nThank you for your business.',
+    reminderEnabled: true,
+    reminderDays: 3,
+    lateFeeEnabled: false,
+    lateFeePercentage: 2.5
+  });
 
   // Check authentication
   useEffect(() => {
@@ -29,37 +39,83 @@ const InvoiceSettings = () => {
     }
   }, [isAuthenticated, navigate]);
 
-  // Load settings from localStorage (in a real app, these would come from the database)
+  // Load settings from localStorage on mount
   useEffect(() => {
-    const savedSettings = localStorage.getItem('invoiceSettings');
-    if (savedSettings) {
-      setSettings(JSON.parse(savedSettings));
+    if (isAuthenticated) {
+      const savedSettings = localStorage.getItem('invoiceSettings');
+      if (savedSettings) {
+        try {
+          setSettings(JSON.parse(savedSettings));
+        } catch (err) {
+          console.error('Error parsing saved invoice settings:', err);
+        }
+      }
     }
-  }, []);
+  }, [isAuthenticated]);
 
   // Handle form field changes
   const handleChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
     setSettings(prev => ({
       ...prev,
-      [name]: value
+      [name]: type === 'checkbox' ? checked : value
     }));
   };
 
-  // Handle form submission
+  // Handle numeric input changes
+  const handleNumericChange = (e) => {
+    const { name, value } = e.target;
+    const numericValue = parseFloat(value) || 0;
+    setSettings(prev => ({
+      ...prev,
+      [name]: numericValue
+    }));
+  };
+
+  // Save settings to localStorage
   const handleSubmit = (e) => {
     e.preventDefault();
     setLoading(true);
     
     try {
-      // In a real app, this would be saved to the database via a service
       localStorage.setItem('invoiceSettings', JSON.stringify(settings));
       toast.success('Invoice settings saved successfully');
     } catch (err) {
-      console.error('Error saving settings:', err);
-      toast.error('Failed to save settings');
+      console.error('Error saving invoice settings:', err);
+      toast.error('Failed to save invoice settings');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Reset settings to defaults
+  const handleReset = () => {
+    const confirmed = window.confirm('Are you sure you want to reset all settings to default values?');
+    if (confirmed) {
+      setSettings({
+        defaultTaxRate: 10,
+        defaultPaymentTerms: 30,
+        invoicePrefix: 'INV-',
+        companyName: '',
+        companyAddress: '',
+        companyPhone: '',
+        companyEmail: '',
+        companyWebsite: '',
+        companyLogo: '',
+        bankName: '',
+        bankAccountName: '',
+        bankAccountNumber: '',
+        bankRoutingNumber: '',
+        noteToCustomer: 'Thank you for your business!',
+        paymentInstructions: 'Please make payment within the due date.',
+        emailTemplate: 'Dear {{customer}},\n\nPlease find attached invoice {{invoiceNumber}} due on {{dueDate}}.\n\nTotal Amount: ${{total}}\n\nThank you for your business.',
+        reminderEnabled: true,
+        reminderDays: 3,
+        lateFeeEnabled: false,
+        lateFeePercentage: 2.5
+      });
+      localStorage.removeItem('invoiceSettings');
+      toast.info('Settings reset to defaults');
     }
   };
 
@@ -76,70 +132,39 @@ const InvoiceSettings = () => {
       </div>
       
       <form onSubmit={handleSubmit} className="bg-white dark:bg-surface-800 shadow-card rounded-xl p-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Company Information */}
-          <div>
-            <h2 className="text-lg font-semibold mb-4">Company Information</h2>
-            
-            <div className="mb-4">
+        {/* General Settings */}
+        <div className="mb-8">
+          <h2 className="text-lg font-semibold mb-4 pb-2 border-b border-surface-200 dark:border-surface-700">General Settings</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
               <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">
-                Company Name
+                Default Tax Rate (%)
               </label>
               <input
-                type="text"
-                name="companyName"
-                value={settings.companyName}
-                onChange={handleChange}
+                type="number"
+                name="defaultTaxRate"
+                value={settings.defaultTaxRate}
+                onChange={handleNumericChange}
+                min="0"
+                step="0.01"
                 className="input"
-                required
               />
             </div>
-            
-            <div className="mb-4">
+            <div>
               <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">
-                Company Address
-              </label>
-              <textarea
-                name="companyAddress"
-                value={settings.companyAddress}
-                onChange={handleChange}
-                className="input"
-                rows={3}
-              />
-            </div>
-            
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">
-                Company Email
+                Default Payment Terms (days)
               </label>
               <input
-                type="email"
-                name="companyEmail"
-                value={settings.companyEmail}
-                onChange={handleChange}
+                type="number"
+                name="defaultPaymentTerms"
+                value={settings.defaultPaymentTerms}
+                onChange={handleNumericChange}
+                min="0"
+                step="1"
                 className="input"
               />
             </div>
-            
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">
-                Company Phone
-              </label>
-              <input
-                type="text"
-                name="companyPhone"
-                value={settings.companyPhone}
-                onChange={handleChange}
-                className="input"
-              />
-            </div>
-          </div>
-          
-          {/* Invoice Defaults */}
-          <div>
-            <h2 className="text-lg font-semibold mb-4">Invoice Defaults</h2>
-            
-            <div className="mb-4">
+            <div>
               <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">
                 Invoice Number Prefix
               </label>
@@ -151,57 +176,44 @@ const InvoiceSettings = () => {
                 className="input"
               />
             </div>
-            
-            <div className="mb-4">
+          </div>
+        </div>
+        
+        {/* Company Information */}
+        <div className="mb-8">
+          <h2 className="text-lg font-semibold mb-4 pb-2 border-b border-surface-200 dark:border-surface-700">Company Information</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
               <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">
-                Default Tax Rate (%)
+                Company Name
               </label>
               <input
-                type="number"
-                name="defaultTaxRate"
-                value={settings.defaultTaxRate}
+                type="text"
+                name="companyName"
+                value={settings.companyName}
                 onChange={handleChange}
-                min="0"
-                step="0.01"
                 className="input"
               />
             </div>
-            
-            <div className="mb-4">
+            <div>
               <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">
-                Default Payment Terms (days)
+                Company Email
               </label>
               <input
-                type="number"
-                name="defaultDueDays"
-                value={settings.defaultDueDays}
+                type="email"
+                name="companyEmail"
+                value={settings.companyEmail}
                 onChange={handleChange}
-                min="1"
-                step="1"
                 className="input"
               />
             </div>
-            
-            <div className="mb-4">
+            <div className="md:col-span-2">
               <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">
-                Default Notes
+                Company Address
               </label>
               <textarea
-                name="defaultNotes"
-                value={settings.defaultNotes}
-                onChange={handleChange}
-                className="input"
-                rows={2}
-              />
-            </div>
-            
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">
-                Payment Instructions
-              </label>
-              <textarea
-                name="paymentInstructions"
-                value={settings.paymentInstructions}
+                name="companyAddress"
+                value={settings.companyAddress}
                 onChange={handleChange}
                 className="input"
                 rows={3}
@@ -210,11 +222,134 @@ const InvoiceSettings = () => {
           </div>
         </div>
         
+        {/* Payment Information */}
+        <div className="mb-8">
+          <h2 className="text-lg font-semibold mb-4 pb-2 border-b border-surface-200 dark:border-surface-700">Payment Information</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">
+                Bank Name
+              </label>
+              <input
+                type="text"
+                name="bankName"
+                value={settings.bankName}
+                onChange={handleChange}
+                className="input"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">
+                Account Name
+              </label>
+              <input
+                type="text"
+                name="bankAccountName"
+                value={settings.bankAccountName}
+                onChange={handleChange}
+                className="input"
+              />
+            </div>
+          </div>
+        </div>
+        
+        {/* Email Template */}
+        <div className="mb-8">
+          <h2 className="text-lg font-semibold mb-4 pb-2 border-b border-surface-200 dark:border-surface-700">Email Template</h2>
+          <div>
+            <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">
+              Default Email Template
+            </label>
+            <p className="text-sm text-surface-500 mb-2">
+              You can use these placeholders: {{'{{'}}customer{{'}}'}}, {{'{{'}}invoiceNumber{{'}}'}}, {{'{{'}}dueDate{{'}}'}}, {{'{{'}}total{{'}}'}}
+            </p>
+            <textarea
+              name="emailTemplate"
+              value={settings.emailTemplate}
+              onChange={handleChange}
+              className="input"
+              rows={6}
+            />
+          </div>
+        </div>
+        
+        {/* Late Payments */}
+        <div className="mb-8">
+          <h2 className="text-lg font-semibold mb-4 pb-2 border-b border-surface-200 dark:border-surface-700">Late Payments</h2>
+          <div className="space-y-4">
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="reminderEnabled"
+                name="reminderEnabled"
+                checked={settings.reminderEnabled}
+                onChange={handleChange}
+                className="h-4 w-4 text-primary border-surface-300 rounded focus:ring-primary"
+              />
+              <label htmlFor="reminderEnabled" className="ml-2 block text-sm text-surface-700 dark:text-surface-300">
+                Send payment reminders
+              </label>
+            </div>
+            
+            {settings.reminderEnabled && (
+              <div className="ml-6">
+                <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">
+                  Days before due date
+                </label>
+                <input
+                  type="number"
+                  name="reminderDays"
+                  value={settings.reminderDays}
+                  onChange={handleNumericChange}
+                  min="1"
+                  step="1"
+                  className="input w-24"
+                />
+              </div>
+            )}
+            
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="lateFeeEnabled"
+                name="lateFeeEnabled"
+                checked={settings.lateFeeEnabled}
+                onChange={handleChange}
+                className="h-4 w-4 text-primary border-surface-300 rounded focus:ring-primary"
+              />
+              <label htmlFor="lateFeeEnabled" className="ml-2 block text-sm text-surface-700 dark:text-surface-300">
+                Apply late payment fee
+              </label>
+            </div>
+            
+            {settings.lateFeeEnabled && (
+              <div className="ml-6">
+                <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">
+                  Late fee percentage (%)
+                </label>
+                <input
+                  type="number"
+                  name="lateFeePercentage"
+                  value={settings.lateFeePercentage}
+                  onChange={handleNumericChange}
+                  min="0"
+                  step="0.1"
+                  className="input w-24"
+                />
+              </div>
+            )}
+          </div>
+        </div>
+        
         {/* Form Actions */}
-        <div className="flex justify-end space-x-4 mt-6">
-          <Link to="/invoices" className="btn-outline py-2">
-            Cancel
-          </Link>
+        <div className="flex justify-end space-x-4">
+          <button
+            type="button"
+            onClick={handleReset}
+            className="btn-outline py-2"
+          >
+            Reset to Defaults
+          </button>
           <button
             type="submit"
             className="btn-primary py-2 relative"

@@ -5,6 +5,7 @@ import { format } from 'date-fns';
 import ApperIcon from '../../components/ApperIcon';
 import { AuthContext } from '../../App';
 import { createInvoice } from '../../services/invoiceService';
+import { createInvoiceItems } from '../../services/invoiceItemService';
 import { fetchProducts } from '../../services/productService';
 
 const CreateInvoice = () => {
@@ -185,16 +186,35 @@ const CreateInvoice = () => {
     try {
       // Prepare data for API
       const invoiceData = {
-        ...formData,
-        // Stringify the items array for storage
-        items: JSON.stringify(formData.items),
-        // Include the Name field required by the API
         Name: `Invoice for ${formData.customer}`,
-        // Set owner to current user if authenticated
-        Owner: user?.userId || undefined
+        invoiceNumber: formData.invoiceNumber,
+        issueDate: formData.issueDate,
+        dueDate: formData.dueDate,
+        customer: formData.customer,
+        customerEmail: formData.customerEmail,
+        customerAddress: formData.customerAddress,
+        status: formData.status,
+        notes: formData.notes,
+        subtotal: formData.subtotal,
+        tax: formData.tax,
+        total: formData.total,
+        Owner: user?.userId || undefined,
+        items: JSON.stringify(formData.items)
       };
       
       const createdInvoice = await createInvoice(invoiceData);
+      
+      // Create invoice items in the database
+      if (formData.items.length > 0) {
+        try {
+          await createInvoiceItems(createdInvoice.Id, formData.items);
+        } catch (itemError) {
+          console.error('Error creating invoice items:', itemError);
+          // We'll continue even if item creation fails, since the invoice is created
+          toast.warning('Invoice created, but there was an issue with invoice items');
+        }
+      }
+      
       toast.success('Invoice created successfully');
       navigate(`/invoices/${createdInvoice.Id}`);
     } catch (err) {

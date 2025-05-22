@@ -4,7 +4,7 @@ import { toast } from 'react-toastify';
 import { format } from 'date-fns';
 import ApperIcon from '../../components/ApperIcon';
 import { AuthContext } from '../../App';
-import { fetchInvoices } from '../../services/invoiceService';
+import { fetchInvoices, deleteInvoice } from '../../services/invoiceService';
 
 const InvoiceList = () => {
   const navigate = useNavigate();
@@ -19,6 +19,8 @@ const InvoiceList = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [deleteConfirmation, setDeleteConfirmation] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   // Check authentication
   useEffect(() => {
@@ -33,7 +35,14 @@ const InvoiceList = () => {
     const getInvoices = async () => {
       setLoading(true);
       try {
-        const invoiceData = await fetchInvoices(filters);
+        // Create API filters from the UI filters
+        const apiFilters = {
+          ...filters,
+          search: searchTerm // Add search term to filters
+        };
+        
+        // Fetch invoices with filters
+        const invoiceData = await fetchInvoices(apiFilters);
         setInvoices(invoiceData);
         setError(null);
       } catch (err) {
@@ -48,7 +57,7 @@ const InvoiceList = () => {
     if (isAuthenticated) {
       getInvoices();
     }
-  }, [isAuthenticated, filters]);
+  }, [isAuthenticated, filters, searchTerm]);
 
   // Handle filter changes
   const handleFilterChange = (key, value) => {
@@ -82,6 +91,27 @@ const InvoiceList = () => {
   // Handle sort change
   const handleSortChange = (e) => {
     setSortBy(e.target.value);
+  };
+
+  // Handle invoice deletion
+  const handleDeleteInvoice = async (invoice) => {
+    setDeleteConfirmation(invoice);
+  };
+
+  // Confirm deletion
+  const confirmDelete = async () => {
+    if (!deleteConfirmation) return;
+    
+    setDeleteLoading(true);
+    try {
+      await deleteInvoice(deleteConfirmation.Id);
+      setInvoices(invoices.filter(inv => inv.Id !== deleteConfirmation.Id));
+      setDeleteConfirmation(null);
+    } catch (err) {
+      console.error('Error deleting invoice:', err);
+    } finally {
+      setDeleteLoading(false);
+    }
   };
 
   // Sort and filter invoices
@@ -250,7 +280,7 @@ const InvoiceList = () => {
                 <th className="py-3 px-4 text-left text-sm font-medium text-surface-700 dark:text-surface-300">Customer</th>
                 <th className="py-3 px-4 text-left text-sm font-medium text-surface-700 dark:text-surface-300">Issue Date</th>
                 <th className="py-3 px-4 text-left text-sm font-medium text-surface-700 dark:text-surface-300">Due Date</th>
-                <th className="py-3 px-4 text-left text-sm font-medium text-surface-700 dark:text-surface-300">Amount</th>
+                <th className="py-3 px-4 text-left text-sm font-medium text-surface-700 dark:text-surface-300">Total</th>
                 <th className="py-3 px-4 text-left text-sm font-medium text-surface-700 dark:text-surface-300">Status</th>
                 <th className="py-3 px-4 text-left text-sm font-medium text-surface-700 dark:text-surface-300">Actions</th>
               </tr>
@@ -266,7 +296,7 @@ const InvoiceList = () => {
                   <td className="py-3 px-4 text-sm">{invoice.customer || 'N/A'}</td>
                   <td className="py-3 px-4 text-sm">{formatDate(invoice.issueDate)}</td>
                   <td className="py-3 px-4 text-sm">{formatDate(invoice.dueDate)}</td>
-                  <td className="py-3 px-4 text-sm font-medium">${invoice.total?.toFixed(2) || '0.00'}</td>
+                  <td className="py-3 px-4 text-sm font-medium">${(invoice.total || invoice.totalAmount || 0).toFixed(2)}</td>
                   <td className="py-3 px-4 text-sm">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadgeClass(invoice.status)}`}>
                       {invoice.status || 'Unknown'}
@@ -286,12 +316,43 @@ const InvoiceList = () => {
                       <button className="p-1 text-surface-600 hover:text-primary" title="Send Email">
                         <ApperIcon name="Mail" className="h-4 w-4" />
                       </button>
+                      <button onClick={() => handleDeleteInvoice(invoice)} className="p-1 text-surface-600 hover:text-red-500" title="Delete">
+                        <ApperIcon name="Trash2" className="h-4 w-4" />
+                      </button>
                     </div>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+      
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmation && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-surface-800 rounded-xl shadow-xl p-6 w-full max-w-md">
+            <div className="text-center mb-4">
+              <ApperIcon name="AlertTriangle" className="h-12 w-12 text-red-500 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold">Delete Invoice</h3>
+              <p className="text-surface-600 dark:text-surface-400 mt-2">
+                Are you sure you want to delete invoice {deleteConfirmation.invoiceNumber || `#${deleteConfirmation.Id}`}?
+                This action cannot be undone.
+              </p>
+            </div>
+            <div className="flex justify-center space-x-4">
+              <button 
+                onClick={() => setDeleteConfirmation(null)} 
+                className="btn-outline py-2"
+                disabled={deleteLoading}
+              >Cancel</button>
+              <button 
+                onClick={confirmDelete} 
+                className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-medium"
+                disabled={deleteLoading}
+              >{deleteLoading ? <ApperIcon name="Loader" className="animate-spin h-4 w-4 mx-auto" /> : 'Delete'}</button>
+            </div>
+          </div>
         </div>
       )}
     </div>
